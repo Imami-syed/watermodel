@@ -1,0 +1,14 @@
+#cmds
+gmx pdb2gmx -f box.pdb -o box.gro -p topol.top 
+
+#Energy minimization
+gmx grompp -f em.mdp -c box.gro -p topol.top -o em.tpr
+gmx mdrun -v -deffnm em -ntomp 39
+
+#nvt -> temprature equiviblrium
+gmx grompp -f nvt.mdp -c em.gro -r em.gro -p topol.top -o nvt.tpr -maxwarn 1
+gmx mdrun -v -deffnm nvt -ntomp 39
+
+#npt -> pressure equiviblrium
+gmx grompp -f npt.mdp -c nvt.gro -r nvt.gro -t nvt.cpt -p topol.top -o npt.tpr
+gmx mdrun -v -deffnm npt -ntomp 39
