@@ -1,0 +1,20 @@
+box size - 2.6 molecules - 592
+--2368 atoms
+mass of 592 water molecules - 592*18.02amu = 10667.84amu
+volume = (2.6)^3 = 17.576 nm^3
+1 amu = 1.6*10^(-24) gm
+1nm = 10^-7 cm
+density= 10667.84amu / 17.576 nm^3 = 606.95 amu/nm^3 = 606.95*(1.6*10^-24*10^21) g/cm^3
+	= 971.127 * 10^-3 g/cm^3
+	= 0.97 g/cc
+	~= 1g/cc
+	--> density correct 
+	
+
+	
+// commands changed in between to make the ref tau p - 4.0 when ref tau t is 2.0 
+// all energy equlibirisation done twice 
+// temperature equilibirisation done once
+// pressure  equillibirisation done once
+// xvg files and plots are generated
+                             
