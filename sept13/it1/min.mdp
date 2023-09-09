@@ -1,15 +1,15 @@
 ;
 ;	File 'min.mdp' was generated
 ;	By user: imami (1000)
-;	On host: pop-os
-;	At date: Fri Sep  8 21:26:28 2023
+;	On host: imami-Dell-G15-5520
+;	At date: Sun Sep 10 04:04:11 2023
 ;
 ;	Created by:
-;	                     :-) GROMACS - gmx grompp, 2023.1 (-:
+;	             :-) GROMACS - gmx grompp, 2021.4-Ubuntu-2021.4-2 (-:
 ;	
-;	Executable:   /usr/local/gromacs/bin/gmx
-;	Data prefix:  /usr/local/gromacs
-;	Working dir:  /home/imami/watermodel/sept9/sim
+;	Executable:   /usr/bin/gmx
+;	Data prefix:  /usr
+;	Working dir:  /home/imami/watermodel/sept13/it1
 ;	Command line:
 ;	  gmx grompp -f min.mdp -o min.tpr -pp min.top -po min.mdp
 
@@ -130,8 +130,6 @@ epsilon-surface          = 0
 implicit-solvent         = no
 
 ; OPTIONS FOR WEAK COUPLING ALGORITHMS
-ensemble-temperature-setting = auto
-ensemble-temperature     = -1
 ; Temperature coupling  
 tcoupl                   = No
 nsttcouple               = -1
@@ -261,15 +259,11 @@ temperature-lambdas      =
 calc-lambda-neighbors    = 1
 init-lambda-weights      = 
 dhdl-print-energy        = no
-sc-function              = beutler
 sc-alpha                 = 0
 sc-power                 = 1
 sc-r-power               = 6
 sc-sigma                 = 0.3
 sc-coul                  = no
-sc-gapsys-scale-linpoint-lj = 0.85
-sc-gapsys-scale-linpoint-q = 0.3
-sc-gapsys-sigma-lj       = 0.3
 separate-dhdl-file       = yes
 dhdl-derivatives         = yes
 dh_hist_size             = 0
@@ -316,6 +310,3 @@ electric-field-z         = 0 0 0 0
 
 ; Density guided simulation
 density-guided-simulation-active = false
-
-; QM/MM with CP2K
-qmmm-cp2k-active         = false
