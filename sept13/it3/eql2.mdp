@@ -2,14 +2,14 @@
 ;	File 'eql2.mdp' was generated
 ;	By user: imami (1000)
 ;	On host: imami-Dell-G15-5520
-;	At date: Sun Sep 10 23:01:32 2023
+;	At date: Sun Sep 10 20:33:44 2023
 ;
 ;	Created by:
 ;	             :-) GROMACS - gmx grompp, 2021.4-Ubuntu-2021.4-2 (-:
 ;	
 ;	Executable:   /usr/bin/gmx
 ;	Data prefix:  /usr
-;	Working dir:  /home/imami/watermodel/sept13/it3
+;	Working dir:  /home/imami/watermodel/sept13/it2
 ;	Command line:
 ;	  gmx grompp -f eql2.mdp -o eql2.tpr -pp eql2.top -po eql2.mdp -c eql.gro
 
@@ -24,8 +24,8 @@ define                   =
 integrator               = md
 ; Start time and timestep in ps
 tinit                    = 0
-dt                       = 0.05
-nsteps                   = 4000000
+dt                       = 0.002
+nsteps                   = 2500000
 ; For exact run continuation or redoing part of a run
 init-step                = 0
 ; Part index is updated automatically on checkpointing (keeps files separate)
@@ -69,7 +69,7 @@ nstlog                   = 10000
 nstcalcenergy            = 100
 nstenergy                = 5000
 ; Output frequency and precision for .xtc file
-nstxout-compressed       = 8
+nstxout-compressed       = 5
 compressed-x-precision   = 1000
 ; This selects the subset of atoms for the compressed
 ; trajectory file. You can select multiple groups. By
@@ -82,13 +82,13 @@ energygrps               =
 ; cut-off scheme (Verlet: particle based cut-offs)
 cutoff-scheme            = Verlet
 ; nblist update frequency
-nstlist                  = 1000
+nstlist                  = 10
 ; Periodic boundary conditions: xyz, no, xy
 pbc                      = xyz
 periodic-molecules       = no
 ; Allowed energy error due to the Verlet buffer in kJ/mol/ps per atom,
 ; a value of -1 means: use rlist
-verlet-buffer-tolerance  = 0.05
+verlet-buffer-tolerance  = 0.005
 ; nblist cut-off        
 rlist                    = 1
 ; long-range cut-off for switched potentials
@@ -138,14 +138,14 @@ print-nose-hoover-chain-variables = no
 ; Groups to couple separately
 tc-grps                  = System
 ; Time constant (ps) and reference temperature (K)
-tau-t                    = 10.0
+tau-t                    = 2.0
 ref-t                    = 298.15
 ; pressure coupling     
 pcoupl                   = Parrinello-Rahman
 pcoupltype               = Isotropic
 nstpcouple               = -1
 ; Time constant (ps), compressibility (1/bar) and reference P (bar)
-tau_p                    = 10.0
+tau_p                    = 4.0
 compressibility          = 4.46e-5
 ref_p                    = 1.0
 ; Scaling of reference coordinates, No, All or COM

@@ -2,7 +2,7 @@
 ;	File 'eql2.mdp' was generated
 ;	By user: imami (1000)
 ;	On host: imami-Dell-G15-5520
-;	At date: Sun Sep 10 20:33:44 2023
+;	At date: Mon Sep 11 01:05:45 2023
 ;
 ;	Created by:
 ;	             :-) GROMACS - gmx grompp, 2021.4-Ubuntu-2021.4-2 (-:
@@ -24,8 +24,8 @@ define                   =
 integrator               = md
 ; Start time and timestep in ps
 tinit                    = 0
-dt                       = 0.002
-nsteps                   = 2500000
+dt                       = 0.001
+nsteps                   = 0
 ; For exact run continuation or redoing part of a run
 init-step                = 0
 ; Part index is updated automatically on checkpointing (keeps files separate)
@@ -65,11 +65,11 @@ nstxout                  = 0
 nstvout                  = 0
 nstfout                  = 0
 ; Output frequency for energies to log file and energy file
-nstlog                   = 10000
+nstlog                   = 1000
 nstcalcenergy            = 100
-nstenergy                = 5000
+nstenergy                = 1000
 ; Output frequency and precision for .xtc file
-nstxout-compressed       = 5
+nstxout-compressed       = 0
 compressed-x-precision   = 1000
 ; This selects the subset of atoms for the compressed
 ; trajectory file. You can select multiple groups. By
@@ -95,21 +95,21 @@ rlist                    = 1
 
 ; OPTIONS FOR ELECTROSTATICS AND VDW
 ; Method for doing electrostatics
-coulombtype              = PME
+coulombtype              = Cut-off
 coulomb-modifier         = Potential-shift-Verlet
 rcoulomb-switch          = 0
-rcoulomb                 = 1.0
+rcoulomb                 = 1
 ; Relative dielectric constant for the medium and the reaction field
 epsilon-r                = 1
 epsilon-rf               = 0
 ; Method for doing Van der Waals
-vdwtype                  = Cut-off
+vdw-type                 = Cut-off
 vdw-modifier             = Potential-shift-Verlet
 ; cut-off lengths       
 rvdw-switch              = 0
-rvdw                     = 1.0
+rvdw                     = 1
 ; Apply long range dispersion corrections for Energy and Pressure
-DispCorr                 = EnerPres
+DispCorr                 = No
 ; Extension of the potential lookup tables beyond the cut-off
 table-extension          = 1
 ; Separate tables between energy group pairs
@@ -131,23 +131,23 @@ implicit-solvent         = no
 
 ; OPTIONS FOR WEAK COUPLING ALGORITHMS
 ; Temperature coupling  
-tcoupl                   = Nose-Hoover
+tcoupl                   = No
 nsttcouple               = -1
-nhchainlength            = 1
+nh-chain-length          = 10
 print-nose-hoover-chain-variables = no
 ; Groups to couple separately
-tc-grps                  = System
+tc-grps                  = 
 ; Time constant (ps) and reference temperature (K)
-tau-t                    = 2.0
-ref-t                    = 298.15
+tau-t                    = 
+ref-t                    = 
 ; pressure coupling     
-pcoupl                   = Parrinello-Rahman
+pcoupl                   = No
 pcoupltype               = Isotropic
 nstpcouple               = -1
 ; Time constant (ps), compressibility (1/bar) and reference P (bar)
-tau_p                    = 4.0
-compressibility          = 4.46e-5
-ref_p                    = 1.0
+tau-p                    = 1
+compressibility          = 
+ref-p                    = 
 ; Scaling of reference coordinates, No, All or COM
 refcoord-scaling         = No
 
@@ -172,11 +172,11 @@ gen-temp                 = 300
 gen-seed                 = -1
 
 ; OPTIONS FOR BONDS    
-constraints              = h-bonds
+constraints              = none
 ; Type of constraint algorithm
-constraint-algorithm     = lincs
+constraint-algorithm     = Lincs
 ; Do not constrain the start configuration
-continuation             = yes
+continuation             = no
 ; Use successive overrelaxation to reduce the number of shake iterations
 Shake-SOR                = no
 ; Relative tolerance of shake

@@ -2,14 +2,14 @@
 ;	File 'eql.mdp' was generated
 ;	By user: imami (1000)
 ;	On host: imami-Dell-G15-5520
-;	At date: Sun Sep 10 22:47:12 2023
+;	At date: Sun Sep 10 20:31:40 2023
 ;
 ;	Created by:
 ;	             :-) GROMACS - gmx grompp, 2021.4-Ubuntu-2021.4-2 (-:
 ;	
 ;	Executable:   /usr/bin/gmx
 ;	Data prefix:  /usr
-;	Working dir:  /home/imami/watermodel/sept13/it3
+;	Working dir:  /home/imami/watermodel/sept13/it2
 ;	Command line:
 ;	  gmx grompp -f eql.mdp -o eql.tpr -pp eql.top -po eql.mdp -c min2.gro
 
