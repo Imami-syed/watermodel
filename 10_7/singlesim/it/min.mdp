@@ -1,0 +1,25 @@
+
+define                   = -DFLEXIBLE
+integrator               = steep
+nsteps                   = 1000
+
+nstenergy                = 500
+nstlog                   = 500
+nstxout-compressed       = 1000
+
+constraint-algorithm     = lincs
+constraints              = h-bonds
+
+cutoff-scheme            = Verlet
+
+coulombtype              = PME
+rcoulomb                 = 1.2
+
+vdwtype                  = Cut-off
+rvdw                     = 1.2
+DispCorr                 = EnerPres
+pbc=xyz
+
+; decreasing the pme mesh load
+;pme_order                = 12
+;fourierspacing           = 0.1923 
