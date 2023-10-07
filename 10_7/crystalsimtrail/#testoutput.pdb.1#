@@ -1,0 +1,11 @@
+TITLE     TIP4P Water Molecules
+REMARK    THIS IS A SIMULATION BOX
+CRYST1   40.000   13.830   13.700  90.00  90.00  90.00 P 1           1
+MODEL        1
+ATOM      1      1SOL -8016      10.000  25.310   1.230  1.00  0.00            
+ATOM      2      1SOL -8016      20.000  33.210   1.230  1.00  0.00            
+ATOM      3      1SOL -8016      30.000  29.260   8.080  1.00  0.00            
+ATOM      4      1SOL -8016      40.000  29.260  -5.620  1.00  0.00            
+ATOM      5      2SOL -8016      50.000  19.380   4.760  1.00  0.00            
+TER
+ENDMDL
