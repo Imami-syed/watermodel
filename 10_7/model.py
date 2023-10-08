@@ -11,6 +11,10 @@ from torch_geometric.nn import  GCNConv,BatchNorm,Linear
 import torch_geometric.data as data
 from torch_geometric.utils.convert import to_networkx
 
+import torch 
+from torch_geometric.data import Data
+from torch_geometric.nn import GATConv
+from torch_geometric.nn import GatedGraphConv
 import numpy as np
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
@@ -223,8 +227,8 @@ class VariationalGCNEncoder(torch.nn.Module):
         self.out_channels = out_channels
         
         super().__init__()
-        # self.conv1 = GATConv(self.in_channels,self.embedding_size1,heads=3)
-        self.conv1 = GCNConv(self.in_channels,self.embedding_size1,heads=3)
+        self.conv1 = GATConv(self.in_channels,self.embedding_size1,heads=3)
+        # self.conv1 = GCNConv(self.in_channels,self.embedding_size1,heads=3)
         self.head_transform1 = Linear(self.embedding_size1*3, self.embedding_size1)
         self.bn1 = BatchNorm(self.embedding_size1)
         
