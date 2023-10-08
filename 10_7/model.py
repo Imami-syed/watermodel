@@ -219,7 +219,7 @@ class VariationalGCNEncoder(torch.nn.Module):
         self.embedding_size1 = 15
         self.embedding_size2 = 9
         self.linear_size1 = 100
-        self.linear_size2 = 4
+        self.linear_size2 = 1
         
         self.batch_size = batch_size
         self.n_atoms = n_atoms
@@ -245,6 +245,7 @@ class VariationalGCNEncoder(torch.nn.Module):
 
     def forward(self, x, edge_index):
         self.batch_size = x.shape[0]//self.n_atoms
+        # self.batch_size = x.shape[0]
         x = self.conv1(x, edge_index)
         x = self.head_transform1(x)
         x = self.bn1(x)
