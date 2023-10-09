@@ -1,33 +1,30 @@
-from typing import Optional, Tuple 
-import mdtraj as md 
+#basic modules
+import numpy as np
+import mdtraj as md
 from ase import Atoms
-from nglview import show_ase
 import networkx as nx
-
+from tqdm import tqdm
+from nglview import show_ase
+import matplotlib.pyplot as plt
+from typing import Optional, Tuple 
+from sklearn.preprocessing import MinMaxScaler
+# torch modules
 import torch
+import torch.nn.functional as F
+import torch.nn as nn
+import torch.optim.lr_scheduler as lr_scheduler
+from torch import Tensor
+from torch.nn import Module
+# torch_geometric modules
 import torch_geometric.transforms as T
 from torch_geometric.loader import DataLoader
-from torch_geometric.nn import  GCNConv,BatchNorm,Linear
+from torch_geometric.nn import GCNConv, SAGPooling, InnerProductDecoder
+from torch_geometric.nn import BatchNorm,Linear
 import torch_geometric.data as data
 from torch_geometric.utils.convert import to_networkx
-
-import torch 
 from torch_geometric.data import Data
 from torch_geometric.nn import GATConv
 from torch_geometric.nn import GatedGraphConv
-import numpy as np
-import matplotlib.pyplot as plt
-import torch.nn.functional as F
-import torch.nn as nn
-
-import torch.optim.lr_scheduler as lr_scheduler
-from sklearn.preprocessing import MinMaxScaler
-
-from tqdm import tqdm
-import torch
-from torch import Tensor
-from torch.nn import Module
-
 from torch_geometric.nn.inits import reset
 from torch_geometric.utils import negative_sampling
 
@@ -213,114 +210,124 @@ class VGAE(GAE):
         return -0.5 * torch.mean(
             torch.sum(1 + 2 * logstd - mu**2 - logstd.exp()**2, dim=1))
 
+def convert_to_adj(edge_index, num_nodes=None):
+    if num_nodes is None:
+        num_nodes = edge_index.max() + 1
+    adj = torch.zeros(num_nodes, num_nodes)
+    adj[edge_index[0], edge_index[1]] = 1
+    return adj
+
+def convert_to_edge_index(adj):
+    edge_index = adj.nonzero().t()
+    return edge_index
+
 class VariationalGCNEncoder(torch.nn.Module):
+    
     def __init__(self, in_channels, out_channels,batch_size,n_atoms):
-        
-        self.embedding_size1 = 15
-        self.embedding_size2 = 9
-        self.linear_size1 = 100
-        self.linear_size2 = 4
-        
-        self.batch_size = batch_size
-        self.n_atoms = n_atoms
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        
+        self.embedding_size1=16
+        self.embedding_size2=8
+        self.linear_size1=32
+        self.linear_size2=16
+        self.batch_size=batch_size
+        self.n_atoms=n_atoms
+        self.in_channels=in_channels
+        self.out_channels=out_channels
+
         super().__init__()
-        self.conv1 = GATConv(self.in_channels,self.embedding_size1,heads=3)
-        # self.conv1 = GCNConv(self.in_channels,self.embedding_size1,heads=3)
-        self.head_transform1 = Linear(self.embedding_size1*3, self.embedding_size1)
+        self.conv1 = GATConv(in_channels, self.embedding_size1,heads=3)
+        self.head_transform1 = Linear(self.embedding_size1 * 3, self.embedding_size1)
         self.bn1 = BatchNorm(self.embedding_size1)
-        
-        self.conv2 = GCNConv(self.embedding_size1,self.embedding_size2)
+        self.conv2=GCNConv(self.embedding_size1, self.embedding_size2)
         self.bn2 = BatchNorm(self.embedding_size2)
-        
-        self.linear1 = Linear(self.embedding_size2, self.linear_size1)
-        
-        self.linear2 = Linear(self.linear_size1,self.linear_size2)
-        
-        self.transform = Linear(self.linear_size2*self.n_atoms,self.out_channels)
-        
-        self.mu = Linear(self.out_channels, self.out_channels)
-        self.logstd = Linear(self.out_channels, self.out_channels)
+        # here self.embedding_size2 is the number of features per node
+        # and is multiplied by the number of nodes to get the total number of features
+        # where number of nodes - n_atoms
+        self.linear1=Linear(self.embedding_size2*self.n_atoms,self.linear_size1)
+        self.linear2=Linear(self.linear_size1,self.linear_size2)
+        # here self.linear_size2 is the number of features per node
+        # not multiplied by the number of node
 
-    def forward(self, x, edge_index):
-        self.batch_size = x.shape[0]//self.n_atoms
-        # dividing by n_atoms to get the batch size
-        # self.batch_size = x.shape[0]
-        x = self.conv1(x, edge_index)
-        x = self.head_transform1(x)
-        x = self.bn1(x)
+        self.transform=Linear(self.linear_size2,self.out_channels)
+        self.mu=Linear(self.out_channels,self.out_channels)
+        self.logstd=Linear(self.out_channels,self.out_channels)
+    def forward(self, x, edge_index):       
+        self.batch_size=x.shape[0]
+        x=self.conv1= self.conv1(x, edge_index)
+        x=self.head_transform1(x)
+        x=self.bn1(x) 
+        x=self.conv2(x, edge_index)
+        x=self.bn2(x)
+        x=self.linear1(x) 
+        x=F.leaky_relu(x)
+        x=self.linear2(x)
+        x=F.leaky_relu(x)
+        # using linear_size2 as the number of features per node 
+        # instead -1
+        x=x.reshape(self.batch_size,self.n_atoms,self.linear_size2)
+        # this will reshape the tensor to have the number of nodes as the first dimension
+        # and the number of features per node as the second dimension
+        # and the number of nodes is n_atoms
 
-        x = self.conv2(x, edge_index)
-        x = self.bn2(x)
-        
-        x = self.linear1(x)
-        x = F.leaky_relu(x)
+        x=x.reshape(self.batch_size,self.n_atoms*self.linear_size2)
+        # this will reshape the tensor to have the number of nodes as the first dimension
+        # and the number of features per node as the second dimension
+        x=self.transform(x)
+        x=F.leaky_relu(x)
+        x=self.mu(x)
+        y=self.logstd(x)
+        return x,y,edge_index
 
-        x = self.linear2(x)
-        x = F.leaky_relu(x)
-        x = x.reshape(self.batch_size,self.n_atoms,-1)
-        x = x.reshape(self.batch_size,-1)
-        
-        x = self.transform(x)
-        x = F.leaky_relu(x)
-        
-        
-        x,y,z = self.mu(x), self.logstd(x), edge_index
-        return x,y,z
 
 class VariationalGCNDecoder(torch.nn.Module):
-    def __init__(self,in_channels,out_channels,batch_size,n_atoms):
-        self.embedding_size1 = 9
-        self.embedding_size2 = 3
-        self.embedding_size3 = 3
-        self.linear_size1 = 512
-        self.linear_size2 = 128
-        self.batch_size = batch_size
-        self.n_atoms = n_atoms
-        self.in_channels = in_channels
-        self.out_channels = out_channels
+    def __init__(self, in_channels, out_channels,batch_size,n_atoms):
+        self.embedding_size1=8
+        self.embedding_size2=4
+        self.embedding_size3=4
+        self.linear_size1=32
+        self.linear_size2=16
+        self.batch_size=batch_size
+        self.n_atoms=n_atoms
+        self.in_channels=in_channels
+        self.out_channels=out_channels
 
         super().__init__()
-        self.inv_transform = Linear(self.in_channels,self.n_atoms) 
-        # this will be used to convert the input to the required shape
-        # shape is (batch_size*n_atoms,1)
+        # different from that one used out_channels instead of in_channels
+        # and linear_size2 instead of n_atoms
+        self.inv_transform=Linear(self.out_channels,self.linear_size2)       
+        # this will reshape the tensor to have the number of nodes as the first dimension
+        # and the number of features per node as the second dimension
+        # this will be used to convert input to the requires shape
+        # shape is batch_size*n_atoms*linear_size2
+        self.conv1=GCNConv(self.linear_size2,self.embedding_size2)
+        self.bn1 = BatchNorm(self.embedding_size2)
+        self.conv2=GCNConv(self.embedding_size2,self.embedding_size1)
+        self.bn2 = BatchNorm(self.embedding_size1)
+        self.conv3=GCNConv(self.embedding_size1,self.embedding_size3)
+        self.linear1=Linear(self.embedding_size3*self.n_atoms,self.linear_size1)
+        self.linear2=Linear(self.linear_size1,self.linear_size2)
+        self.linear3=Linear(self.linear_size2,self.out_channels)
+
+    def forward(self, z, edge_index,sigmoid=True):
+        self.batch_size=z.shape[0]//self.n_atoms
+        z=self.inv_transform(z)
+        z=F.leaky_relu(z)
+        z=z.reshape(self.batch_size,self.n_atoms,self.linear_size2)
+        z=z.reshape(self.batch_size,self.n_atoms*self.linear_size2)
+        z=self.conv1(z, edge_index)
+        z=self.conv2(z, edge_index)
+        z=self.conv3(z, edge_index)
+        z=self.linear1(z)
+        z=F.leaky_relu(z)
+        z=self.linear2(z)
+        z=F.leaky_relu(z)
+        # leaky relu will be used instead of relu
+        # it will be used to avoid the dying relu problem
+        z=self.linear3(z)
+        z=F.leaky_relu(z)
+
+
+        return z, edge_index
         
-        self.conv1 = GCNConv(1, self.embedding_size1)
-        self.bn1 = BatchNorm(self.embedding_size1)
-
-        self.conv2 = GCNConv(self.embedding_size1,self.embedding_size2)
-        self.bn2 = BatchNorm(self.embedding_size2)
-
-        self.conv3 = GCNConv(self.embedding_size2,self.embedding_size3)
-
-        self.linear1 = Linear(self.embedding_size3, self.linear_size1)
-        self.linear2 = Linear(self.linear_size1, self.linear_size2)
-        self.linear3 = Linear(self.linear_size2, self.out_channels)
-
-    def forward(self, x, edge_index, sigmoid=True):
-        self.batch_size = x.shape[0]//self.n_atoms
-
-        x = self.inv_transform(x)
-        x = F.leaky_relu(x)
-
-        x = x.reshape(x.shape[0]*x.shape[1],1)
-        
-        x = self.conv1(x, edge_index)
-        x = self.conv2(x, edge_index)        
-        x = self.conv3(x,edge_index)
-        
-        x = self.linear1(x)
-        x = F.leaky_relu(x)
-        x = self.linear2(x)
-        x = F.leaky_relu(x)
-        x = self.linear3(x)
-        x = F.leaky_relu(x)
-
-        
-        return x, edge_index
-    
 class EarlyStopper:
     def __init__(self, patience=1, min_delta=0):
         self.patience = patience
@@ -337,3 +344,4 @@ class EarlyStopper:
             if self.counter >= self.patience:
                 return True
         return False
+    
