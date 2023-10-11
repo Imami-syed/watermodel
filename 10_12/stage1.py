@@ -1,41 +1,52 @@
-import mdtraj as md
+# Initial Imports
+# basic default imports
+import warnings
+warnings.filterwarnings('ignore')
+import mdtraj as md 
 from ase import Atoms
-import nglview as nv
+from nglview import show_ase
 import networkx as nx
-
 import numpy as np
 import matplotlib.pyplot as plt
-import torch
+from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
-
-import torch_geometric.transforms as T
-from torch_geometric.loader import DataLoader
-from torch_geometric.nn import GCNConv, SAGPooling, InnerProductDecoder
-import torch_geometric.data as data
-from torch_geometric.utils.convert import to_networkx
-import torch.optim.lr_scheduler as lr_scheduler
-from torch.nn import Linear
-import sys
-import os
-import time
-from torch_geometric.nn import global_mean_pool as gap, global_max_pool as gmp
-from torch_geometric.nn import TransformerConv, GATConv, TopKPooling, BatchNorm
-
-import torch.nn.functional as F
-from torch_geometric.transforms import pad
-
 from typing import Optional, Tuple 
-
+# torch imports
 import torch
 from torch import Tensor
+import torch.nn.functional as F
+import torch.nn as nn
+import torch.optim.lr_scheduler as lr_scheduler
 from torch.nn import Module
-
+# torch geometric imports
+import torch_geometric.transforms as T
+from torch_geometric.loader import DataLoader
+from torch_geometric.nn import  GCNConv,BatchNorm,GATConv,Linear
+import torch_geometric.data as data
+from torch_geometric.utils.convert import to_networkx
 from torch_geometric.nn.inits import reset
 from torch_geometric.utils import negative_sampling
+
+# Path: model.py
+
 
 EPS = 1e-15
 MAX_LOGSTD = 10
 
+# functions written below 
+# function to calculate the adjacency matrix from the edge list
+def convert_to_adj(edge_index, num_nodes=None):
+    if num_nodes is None:
+        num_nodes = edge_index.max() + 1
+    adj = torch.zeros(num_nodes, num_nodes)
+    adj[edge_index[0], edge_index[1]] = 1
+    return adj
+
+def convert_to_edge_index(adj):
+    edge_index = adj.nonzero().t()
+    return edge_index
+
+# Creating the model 
 
 class InnerProductDecoder(torch.nn.Module):
     r"""The inner product decoder from the `"Variational Graph Auto-Encoders"
@@ -215,6 +226,8 @@ class VGAE(GAE):
         return -0.5 * torch.mean(
             torch.sum(1 + 2 * logstd - mu**2 - logstd.exp()**2, dim=1))
 
+# Variational Graph Autoencoder
+
 class VariationalGCNEncoder(torch.nn.Module):
     def __init__(self, in_channels, out_channels,batch_size,n_atoms):
         
@@ -268,6 +281,7 @@ class VariationalGCNEncoder(torch.nn.Module):
         x,y,z = self.mu(x), self.logstd(x), edge_index
         return x,y,z
 
+# Variational Graph Decoder
 class VariationalGCNDecoder(torch.nn.Module):
     def __init__(self,in_channels,out_channels,batch_size,n_atoms):
         self.embedding_size1 = 9
@@ -312,177 +326,27 @@ class VariationalGCNDecoder(torch.nn.Module):
         x = self.linear2(x)
         x = F.leaky_relu(x)
         x = self.linear3(x)
-        x = F.leaky_relu(x)
-
-        
+        x = F.leaky_relu(x)        
         return x, edge_index
     
-model_1_name = "Intra.pt"
-model_stage1 = torch.load("./models/"+model_1_name)
 
+# early stopping class for the model
+# this class is used to stop the training of the model 
+# if the validation loss does not decrease for a certain number of epochs
 
-def condenseFrame2(frame):
-    mol_pos = []
-    edge_list = np.array([[ 0,  1,  0,  2],
-                          [ 1,  0,  2,  0]])
+class EarlyStopper:
+    def __init__(self, patience=1, min_delta=0):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.min_validation_loss = np.inf
 
-    for mol_no,res in enumerate(frame.top.residues):
-        pos = []
-        for atom in res.atoms:
-            pos.append(frame.xyz[0][atom.index])
-        pos = np.array(pos)
-        avg_pos = np.mean(pos,axis=0)
-
-        # pos = pos - pos[9]
-
-        atomic_nums = np.array([[atom.element.atomic_number for atom in res.atoms]]).T
-        vdwr = np.array([[atom.element.radius for atom in res.atoms]]).T
-        node_features = np.concatenate((pos,vdwr,atomic_nums),axis=1)
-        graph = data.Data(x=torch.from_numpy(node_features),edge_index=torch.from_numpy(edge_list))#.to("cuda")
-
-        encoded = model_stage1.encode(graph.x,graph.edge_index)
-
-        model_out = np.mean(encoded[0].detach().cpu().numpy(),axis=0)
-        feature = np.concatenate((model_out,avg_pos))
-            
-        mol_pos.append(feature)
-        
-    mol_pos = np.array(mol_pos)
-    
-    return mol_pos
-def condenseFrame_same_res_id(f):
-    """takes mdtraj frame object as input works even if all molecules have same residue ids
-    (divides based on number of atoms in each molecule) """
-    n_atoms = 4
-    xyz = f.xyz[0]
-    r = (np.random.rand(xyz.shape[0],xyz.shape[1]) - 0.5)*0.5
-    xyz = xyz + r
-    n_parts = xyz.shape[0]//n_atoms
-    mols_pos = np.array(np.array_split(xyz,n_parts))
-
-    edge_list = np.array([[ 0,  1,  0,  2],
-                          [ 1,  0,  2,  0]])
-
-
-
-    atomic_nums =   [[8],[1],[1],[0]]
-    vdwr = [[0.152],[0.12 ],[0.12 ],[0. ]]
-
-    condensed = []
-    for mol_pos in mols_pos:
-        avg_pos = np.mean(mol_pos,axis=0)
-        recentered = mol_pos - mol_pos[1]
-        node_features = np.concatenate((recentered,vdwr,atomic_nums),axis=1)
-        graph = data.Data(x=torch.from_numpy(node_features),edge_index=torch.from_numpy(edge_list))#.to("cuda")
-
-        encoded = model_stage1.encode(graph.x,graph.edge_index)
-
-        model_out = np.mean(encoded[0].detach().cpu().numpy(),axis=0)
-        feature = np.concatenate((model_out,avg_pos))
-
-        condensed.append(feature)
-    condensed = np.array(condensed)
-    return condensed
-def condenseAllFrames_same_res_id(frame,n_frames):
-    """
-    Condenses all frames in a trajectory
-    """
-    condensed_frames = []
-    for frame_id in tqdm(range(n_frames)):
-        cf = condenseFrame_same_res_id(frame)
-        
-        condensed_frames.append(cf)
-        
-    return np.array(condensed_frames)
-
-def get_graph(frame,mol_id,n_neigh,str_type):
-    neigs = getNClosest(frame,mol_id,n_neigh)
-
-    to_list = []
-    from_list = []
-    for mols_id in range(1,1+len(neigs)):
-        to_list.append(mols_id)
-        from_list.append(0)
-        
-        to_list.append(0)
-        from_list.append(mols_id)
-    
-    
-    edge_list = np.array([to_list,from_list])
-    features = np.concatenate((np.array([frame[mol_id]]),np.array(frame[neigs])),axis=0)
-    
-    if(str_type == "cry"):
-        graph = data.Data(x=torch.from_numpy(features),edge_index=torch.from_numpy(edge_list),y=torch.tensor([1]))
-    elif (str_type == "melt"):
-        graph = data.Data(x=torch.from_numpy(features),edge_index=torch.from_numpy(edge_list),y=torch.tensor([0]))
-        
-    return graph
-
-
-def get_graphs(frames,str_type):
-    graphs = []
-    for frame in tqdm(frames):
-        for mol_id in range(len(frame)):
-            graphs.append(get_graph(frame,mol_id,n_neigh,str_type))
-    return graphs
-
-def condenseAllFrames(frames):
-    """
-    Condenses all frames in a trajectory
-    """
-    condensed_frames = []
-    for frame in tqdm(frames):
-        condensed_frames.append(condenseFrame2(frame))
-    return np.array(condensed_frames)
-
-def getNClosest(frame,mol_id,n):
-    """ Returns the n closest molecules to the given molecule. """
-    frame = frame[:,-3:]
-    coord = frame[mol_id]
-    dists = np.linalg.norm(frame-coord,axis=1)
-    return np.argsort(dists)[1:n+1]
-
-
-
-def pad(graphs):
-    max_nodes = 0
-    for graph in graphs:
-        max_nodes = max(max_nodes,graph.x.shape[0])
-    
-    padded =[]
-    for graph in graphs:
-        num_features = graph.num_features
-        x = graph.x
-        pad = torch.tensor([[0]*num_features] * (max_nodes-x.shape[0]))
-        graph.x = torch.concatenate((x,pad))
-    
-    return graphs
-
-def convert_to_adj(edge_index, num_nodes=None):
-    if num_nodes is None:
-        num_nodes = edge_index.max() + 1
-    adj = torch.zeros(num_nodes, num_nodes)
-    adj[edge_index[0], edge_index[1]] = 1
-    return adj
-
-def convert_to_edge_index(adj):
-    edge_index = adj.nonzero().t()
-    return edge_index
-
-def plotGraph(graph):
-    plt.figure()
-    pos = nx.draw(to_networkx(g), with_labels=True, node_size=50)
-    plt.show()
-
-def plot3D(graph):
-    # %matplotlib widget
-
-    from mpl_toolkits import mplot3d
-    pos = graph.x[:,-3:]
-
-    ax = plt.axes(projection ="3d")
-    x = pos[:,0]
-    y = pos[:,1]
-    z = pos[:,2]
-    ax.scatter3D(x, y, z)
-    plt.show()
+    def early_stop(self, validation_loss):
+        if validation_loss < self.min_validation_loss:
+            self.min_validation_loss = validation_loss
+            self.counter = 0
+        elif validation_loss > (self.min_validation_loss + self.min_delta):
+            self.counter += 1
+            if self.counter >= self.patience:
+                return True
+        return False
