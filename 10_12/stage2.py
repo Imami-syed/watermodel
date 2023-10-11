@@ -5,7 +5,8 @@ from mpl_toolkits.mplot3d import Axes3D
 # from torch.utils.tensorboard import SummaryWriter
 model1="Intra.pt"
 stage1=torch.load("./models/"+model1)
-n_neigh=15
+n_neigh=20
+#  n_neighbours represent 15  
 def condenseframe(frame):
     mol_pos=[]
     edge_list=np.array([[ 0,  1,  0,  2],
