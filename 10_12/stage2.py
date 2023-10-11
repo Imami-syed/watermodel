@@ -14,7 +14,7 @@ def condenseFrame(frame):
         avg_pos=np.mean(pos,axis=0)
         atomic_nums = np.array([[atom.element.atomic_number for atom in res.atoms]]).T
         vdwr = np.array([[atom.element.radius for atom in res.atoms]]).T
-        node_features = np.concatenate((pos,vdwr,atomic_nums),axis=1)
+        node_features = np.concatenate((pos,vdwr,atomic_nums),axis=0)
         graph = data.Data(x=torch.from_numpy(node_features),edge_index=torch.from_numpy(edge_list)).to("cuda")
         encoded = stage1.encode(graph.x,graph.edge_index)
         model_out = np.mean(encoded[0].detach().cpu().numpy(),axis=0)
