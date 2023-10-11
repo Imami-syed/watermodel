@@ -18,6 +18,7 @@ def condenseframe(frame):
         pos=np.array(pos)
         # print(pos)
         avg_pos=np.mean(pos,axis=0)
+        pos=pos-pos[0]
         # print(avg_pos)
         atomic_nums = np.array([[atom.element.atomic_number for atom in res.atoms]]).T
         # print(atomic_nums)
@@ -109,7 +110,7 @@ def condenseFrame_same_res_id(f):
     condensed = []
     for mol_pos in mols_pos:
         avg_pos = np.mean(mol_pos,axis=0)
-        recentered = mol_pos 
+        recentered = mol_pos - mol_pos[0]
         node_features = np.concatenate((recentered,vdwr,atomic_nums),axis=1)
         graph = data.Data(x=torch.from_numpy(node_features),edge_index=torch.from_numpy(edge_list)).to("cuda")
 
