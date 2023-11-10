@@ -1,50 +1,56 @@
-# Initial Imports
-# basic default imports
-import warnings
-warnings.filterwarnings('ignore')
-import mdtraj as md 
+#initial imports
+import mdtraj as md
 from ase import Atoms
 from nglview import show_ase
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import MinMaxScaler
-from tqdm import tqdm
-from typing import Optional, Tuple 
+from tqdm import tqdm 
+from typing import Optional, List, Tuple, Dict, Any
+import nglview as nv
+import sys
+import os
+import time
+
 # torch imports
 import torch
 from torch import Tensor
-import torch.nn.functional as F
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim.lr_scheduler as lr_scheduler
 from torch.nn import Module
+from torch.nn import Linear
+import torch.nn.functional as F
+from torch_geometric.transforms import pad
+
 # torch geometric imports
 import torch_geometric.transforms as T
 from torch_geometric.loader import DataLoader
-from torch_geometric.nn import  GCNConv,BatchNorm,GATConv,Linear
+from torch_geometric.nn import GCNConv, BatchNorm, GATConv, Linear
+from torch_geometric.nn import GCNConv, SAGPooling, InnerProductDecoder
 import torch_geometric.data as data
 from torch_geometric.utils.convert import to_networkx
 from torch_geometric.nn.inits import reset
 from torch_geometric.utils import negative_sampling
-
-# Path: model.py
+from torch_geometric.nn import global_mean_pool as gap, global_max_pool as gmp
+from torch_geometric.nn import TransformerConv, GATConv, TopKPooling, BatchNorm
 
 
 EPS = 1e-15
 MAX_LOGSTD = 10
 
-# functions written below 
-# function to calculate the adjacency matrix from the edge list
-def convert_to_adj(edge_index, num_nodes=None):
+# function to calculate the adjacency matrix from edge list
+def convert_to_adj(edge_index,num_nodes=None):
     if num_nodes is None:
-        num_nodes = edge_index.max() + 1
-    adj = torch.zeros(num_nodes, num_nodes)
+        num_nodes = edge_index.max().item() + 1
+    adj = torch.zeros((num_nodes, num_nodes))
     adj[edge_index[0], edge_index[1]] = 1
     return adj
 
 def convert_to_edge_index(adj):
-    edge_index = adj.nonzero().t()
-    return edge_index
+    return adj.nonzero().t()
+
+
 
 # Creating the model 
 
